@@ -15,10 +15,5 @@ if [[ ! -f "${directory}/pre-commit" ]]; then
   exit 1
 fi
 
-if [[ ! -f "${directory}/.clang-format" ]]; then
-  printf "Failed to find '.clang-format'."
-  exit 1
-fi
-
 ln -s -f ../../dev-tools/pre-commit "${directory}/../.git/hooks/pre-commit"
-cp .clang-format "${directory}/.."
+
