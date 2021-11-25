@@ -6,7 +6,7 @@ You can use `bootstrap` to "install" some of these tools, e.g., the `pre-commit`
 
 Note that we currently use `ln -s` to "install" git hooks rather than just making a copy so that we can actually update it in the repository and everyone will benefit from the update).
 
-#### ***So, before you start the work with the current repo we recommend you to run this file with the following command in the root directory (Linux & macOS):***
+#### ***So, before you start the work with some repo including this current repo as a submodule, we recommend you to run this file with the following command in the root directory (Linux & macOS):***
 
 ```
 cd dev-tools && ./bootstrap
