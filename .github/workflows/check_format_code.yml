@@ -1,0 +1,21 @@
+on:
+  workflow_call:  
+
+jobs:
+  formatting-check:
+    name: Formatting Check
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Run bootstrap
+      run: |
+        git submodule init
+        git submodule update
+        cd dev-tools/ && ./bootstrap
+    - name: Check all .cc , .h, .proto files for correct code format
+      run: chmod +x dev-tools/check_style.sh && dev-tools/./check_style.sh
+    - name: Install buildifier for .bzl files
+      run: brew install buildifier
+    - name: Check all .bzl, .bazel files for correct code format
+      run: chmod +x dev-tools/check_style_bzl.sh && dev-tools/./check_style_bzl.sh    
+
