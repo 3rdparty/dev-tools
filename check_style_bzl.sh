@@ -16,7 +16,7 @@ bzl_files_paths=$(find . -name '*.bzl' -o -name '*.bazel' -o -name 'BUILD' -o -n
 unset IFS
 
 if [[ ${#bzl_files_paths} == 0 ]]; then
-    printf "There are no files to check!\n"
+    printf "There are no bazel files to check!\n"
     exit 0
 fi
 
@@ -25,7 +25,7 @@ status_exit=0
 for file in ${bzl_files_paths}
 do
     # Check if the specific file has correct code format.
-    buildifier --lint=warn --warnings=-module-docstring,-function-docstring ${file}
+    buildifier --lint=warn --warnings=all --mode=check ${file}
     format_status=$(echo $?)
 
     if [[ ${format_status} != 0 ]]; then
