@@ -1,6 +1,8 @@
 # !/bin/bash
 
-# This export is for the terminal's font.
+# We need this export to enable color output to the terminal using GitHub
+# Actions. If no, we will get the error while using commands in bash such
+# as `tput`.
 export TERM=xterm-color
 
 # Check for existence of buildifier.
