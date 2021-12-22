@@ -32,7 +32,7 @@ BinPackParameters: false
 BreakBeforeBinaryOperators: NonAssignment
 BreakBeforeTernaryOperators: true
 BreakConstructorInitializers: BeforeColon
-ColumnLimit: 0
+ColumnLimit: 80
 CommentPragmas:  '^ IWYU pragma:'
 ConstructorInitializerIndentWidth: 2
 ContinuationIndentWidth: 4
