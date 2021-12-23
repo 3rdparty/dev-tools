@@ -9,5 +9,5 @@ Note that we currently use `ln -s` to "install" git hooks rather than just makin
 #### ***So, before you start the work with some repo including this current repo as a submodule, we recommend you to run this file with the following command in the root directory (Linux & macOS):***
 
 ```
-cd dev-tools && ./bootstrap
+cd dev-tools && ./bootstrap.sh
 ```
