@@ -1,0 +1,20 @@
+# Workflow for changes that don't need to run "Build and Test".
+#
+# Note: The job name of this stub "build" must match the name of the real
+# Build and Test job that this is trying to replace.
+name: nobuild
+
+on:
+  pull_request:
+    branches:
+      - "main"
+    paths:
+      - '**.md'
+
+jobs:
+  build-and-test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - run: 'echo "No build required"'
