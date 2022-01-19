@@ -1,6 +1,6 @@
 #!/bin/bash
 
-INSTALL_DIR="/dev-tools"
+INSTALL_DIR="$(bazel info workspace)/dev-tools"
 VERSION="0.5.2"
 
 # Check if `generate.py` is already present.
@@ -14,4 +14,4 @@ which ${INSTALL_DIR}/bazel-compilation-database-${VERSION}/generate.py &> /dev/n
 # We should add `--action_env=CC=clang` cause we need clang
 # for using clang-tidy. This script should be executed in 
 # the root directory containing `WORKSPACE.bazel`.
-${INSTALL_DIR}/bazel-compilation-database-${VERSION}/generate.py -- --action_env=CC=clang
+${INSTALL_DIR}/bazel-compilation-database-${VERSION}/generate.py -s -- --action_env=CC=clang
