@@ -1,11 +1,44 @@
 # The name of this file should be `action.yml` , `action.yaml` or `Dockerfile`.
+# Should be run only on macOS or Ubuntu.
 
 name: 'Check Code Style'
 desciption: 'Check files for correct code style'
 
+inputs:
+  os: 
+    description: 'Specify operating system on which this action will run'
+  
 runs:
   using: "composite"
   steps:
+    - name: Create symlink to clang-format if Ubuntu
+      if: inputs.os == 'ubuntu-latest'
+      # IMPORTANT NOTE
+      # https://github.com/actions/virtual-environments/blob/main/images/linux/Ubuntu2004-Readme.md
+      # If you check the link above you will see that on Ubuntu 20.04
+      # we have preinstalled clang-format-10/11/12. By default the symlink
+      # to /usr/bin/clang-format-11 is set. That's why we will not be able
+      # to run successfully the checks for code style cause the minimum
+      # version required is `12` (see `dev-tools/check-code-style/check_style.sh` 
+      # especially check_clang_format() function).
+      # That's why the main idea of this step is just setting the symlink to
+      # /usr/bin/clang-format-12, nothing more. Thus we will be able to run all
+      # checks with correct version of clang-format using GitHub Actions. 
+      run: |
+        # Before we recreate the symlink we should delete
+        # the existing one.
+        sudo rm /etc/alternatives/clang-format
+        # Recreate symlink 'clang-format'
+        sudo ln -s /usr/bin/clang-format-12 /etc/alternatives/clang-format 
+      shell: bash
+
+    # On macOS we should install clang-format.
+    - name: Install clang-format-13 if macOS
+      if: inputs.os == 'macos-latest'
+      run: |
+        brew install clang-format@13
+      shell: bash   
+
     - name: Check all .cc , .h, .proto files for correct code style
       run: | 
         chmod +x ${{ github.action_path }}/check_style_of_all_files.sh
