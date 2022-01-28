@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source dev-tools/check-code-style/check_style.sh
+source $(dirname "$0")/check_style.sh
 
 # Check every file for correct code style.
 check_style_of_all_files() {
