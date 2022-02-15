@@ -1,0 +1,20 @@
+# Common build configs that can be used across repositories.
+#
+# Include this file in another .bazelrc with a line like:
+#   try-import submodules/dev-tools/.bazelrc
+
+# Define an https://github.com/google/sanitizers/wiki/AddressSanitizer config
+# to catch common memory errors like use-after-free.
+# See https://stackoverflow.com/a/57733619.
+#
+# Sample use: bazel test --config=asan //my_package:my_test
+#
+# As of 2020/02/15, this has been tested on linux with the bazel default C++
+# compiler.
+build:asan --strip=never
+build:asan --copt -fsanitize=address
+build:asan --copt -DADDRESS_SANITIZER
+build:asan --copt -O1
+build:asan --copt -g
+build:asan --copt -fno-omit-frame-pointer
+build:asan --linkopt -fsanitize=address
