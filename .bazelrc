@@ -3,6 +3,9 @@
 # Include this file in another .bazelrc with a line like:
 #   try-import submodules/dev-tools/.bazelrc
 
+# Print failed test logs to the console by default.
+build --test_output=errors
+
 # Define an https://github.com/google/sanitizers/wiki/AddressSanitizer config
 # to catch common memory errors like use-after-free.
 # See https://stackoverflow.com/a/57733619.
