@@ -12,8 +12,8 @@ build --test_output=errors
 #
 # Sample use: bazel test --config=asan //my_package:my_test
 #
-# As of 2020/02/15, this has been tested on linux with the bazel default C++
-# compiler.
+# As of 2020/02/20, this has been tested in multiple GitHub Workflows
+# using 'ubuntu-20.04' which uses 'gcc' as the default C++ compiler.
 build:asan --strip=never
 build:asan --copt -fsanitize=address
 build:asan --copt -DADDRESS_SANITIZER
