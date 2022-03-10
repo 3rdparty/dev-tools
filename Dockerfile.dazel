@@ -4,7 +4,7 @@
 #
 # See 'bazel/deps.bzl' which should use the same image as here.
 FROM ubuntu:latest
-ARG BAZEL_VERSION=4.2.1
+ARG BAZEL_VERSION=5.0.0
 ARG CLANG_VERSION=14
 
 RUN apt-get update \
