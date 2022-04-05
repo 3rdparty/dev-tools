@@ -9,8 +9,6 @@ on:
     secrets:
       private_repo_access_as_rebot_token:
         required: true
-      token_github:
-        required: true
 
 jobs:
   # Since we want to create one PR per each submodule on submodule change
@@ -136,7 +134,7 @@ jobs:
       if: steps.pr.outputs.pull-request-operation == 'created'
       uses: juliangruber/approve-pull-request-action@v1
       with:
-        github-token: ${{ secrets.token_github }}
+        github-token: ${{ secrets.GITHUB_TOKEN }}
         number: ${{ steps.pr.outputs.pull-request-number }}
 
     # The following three steps aim to create issue in case PR checks failed.
@@ -147,7 +145,7 @@ jobs:
       uses: fountainhead/action-wait-for-check@v1.0.0
       id: wait-for-build
       with:
-        token: ${{ secrets.token_github }}
+        token: ${{ secrets.GITHUB_TOKEN }}
         checkName: 'Build and Test'
         ref: ${{ steps.pr.outputs.pull-request-head-sha }}
         timeoutSeconds: 3600
