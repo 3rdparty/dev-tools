@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source dev-tools/check-code-style/check_style.sh
+source submodules/dev-tools/check-code-style/check_style.sh
 
 run_checks(){
    check_style_of_files_in_commit
