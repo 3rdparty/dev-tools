@@ -5,12 +5,10 @@
 name: Submodules Sync
 
 on:
-  # Run this workflow every 15 minutes.
-  schedule:
-    - cron: "0/15 * * * *"
-  # Allows you to run this workflow manually from the Actions tab or through
-  # the HTTP API.
-  workflow_dispatch:
+  workflow_call:
+    secrets:
+      private_repo_access_as_rebot_token:
+        required: true
 
 jobs:
   # Since we want to create one PR per each submodule on submodule change
