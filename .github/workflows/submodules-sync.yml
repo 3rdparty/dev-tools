@@ -5,10 +5,12 @@
 name: Submodules Sync
 
 on:
-  workflow_call:
-    secrets:
-      private_repo_access_as_rebot_token:
-        required: true
+  # Run this workflow every 15 minutes.
+  schedule:
+    - cron: "0/15 * * * *"
+  # Allows you to run this workflow manually from the Actions tab or through
+  # the HTTP API.
+  workflow_dispatch:
 
 jobs:
   # Since we want to create one PR per each submodule on submodule change
@@ -21,7 +23,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v2
         with:
-          token: ${{ secrets.private_repo_access_as_rebot_token }}
+          token: ${{ secrets.PRIVATE_REPO_ACCESS_AS_REBOT_TOKEN }}
           submodules: recursive
       - id: set-matrix
         name: Set matrix based on modified submodules
@@ -29,27 +31,27 @@ jobs:
           # Update references.
           git submodule update --recursive --remote
           # The following condition is needed to set required outputs.
-          # The step generates two outputs: `path_matrix` and the flag `contains_changes`.
-          # `path_matrix` output contains list of changed submodules,
-          # `contains_changes` is a bolean parameter and contains flag `true` or `false`.
+          # The step generates one output: `path_matrix`.
+          # `path_matrix` output contains list of all submodules within a repo.
           # The flag is used by the main build job.
-          # If it is false next job doesn't start.
-          if [[ $(git ls-files -m) ]]; then
-              echo "::set-output name=path_matrix::[$(git ls-files -m | awk '{ printf "%s\"%s\"", (NR==1?"":", "), $0 } END{ print "" }')]"
-              echo "::set-output name=contains_changes::['true']"
-          else
-              echo "No changed files found"
-              echo "::set-output name=contains_changes::['false']"
-          fi
+          echo "::set-output name=path_matrix::[$(git config --file .gitmodules --get-regexp path | \
+          awk '{ print $2 }' | \
+          awk '{ printf "%s\"%s\"", (NR==1?"":", "), $0 } END{ print "" }')]"
     outputs:
       path_matrix: ${{ steps.set-matrix.outputs.path_matrix }}
-      contains_changes: ${{ steps.set-matrix.outputs.contains_changes }}
 
   sync:
+    # Common description of conditions of the job in terms of Pull Request (in case of submodule changes)
+    # and Issues creating/closing behavior:
+    # 1. If no PR and no issue      -> both PR and issue are created
+    # 2. If both PR and issue exist -> PR is updated, issue stays the same
+    # 3. If PR exists but no issue  -> PR is updated, new issue is not created
+    # This case is relevant when, for example, Submodules-sync workflow runs overlap with each other.
+    # That is possible since they run every 15 minutes, but may take longer than 15 minutes to complete.
+    # 4. If no PR but issue exist   -> existing issue is closed, new PR is created, then new issue is created in case of
+    # build failure
     name: Submodules Sync
     needs: build-matrix
-    # Condition to run the job depending on `contains_changes` flag generated in previous job.
-    if: contains(needs.build-matrix.outputs.contains_changes, 'true')
     runs-on: ubuntu-latest
     # We set strategy matrix to work with changes of each submodule separately.
     strategy:
@@ -60,6 +62,44 @@ jobs:
         shell: bash
 
     steps:
+    # The following step checks whether the issue and pull request have already been created or not for the same
+    # submodule.
+    - name: Check if PR and issue already exist
+      # The API URLs in conditions below search for any existing pull requests and issues using wildcard and
+      # generates ISSUE_EXISTS and PR_EXISTS environment variables and places those in the environment for next steps
+      # through $GITHUB_ENV;
+      # See https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#setting-an-environment-variable
+      # See docs: https://docs.github.com/en/rest/reference/search#search-issues-and-pull-requests--parameters
+      # If the issue exists we also set the `ISSUE_NUMBER` environment variable.
+      # The folowing style of command is YAML folded style (with '>') which is supported by GitHub Actions.
+      # Newlines will be replaced with spaces converting the code to one line.
+      run: >
+        PR_NUMBER=$(curl -s --request GET
+        --url https://api.github.com/search/issues\?q=is:pull-request+is:open+repo:${{ github.repository }}+in:title+Submodule-sync+${{ matrix.path }}+Update+submodule+to+its+latest+version
+        --header 'Authorization: token ${{ secrets.PRIVATE_REPO_ACCESS_AS_REBOT_TOKEN }}' | jq -r ".items[].number" | head -n 1);
+        ISSUE_NUMBER=$(curl -s --request GET
+        --url https://api.github.com/search/issues\?q=is:issue+is:open+repo:${{ github.repository }}+in:title+Submodule+sync+failed+for+"${{ matrix.path }}"
+        --header 'Authorization: token ${{ secrets.PRIVATE_REPO_ACCESS_AS_REBOT_TOKEN }}' | jq -r ".items[].number" | head -n 1);
+        echo "ISSUE_NUMBER=$ISSUE_NUMBER" >> $GITHUB_ENV;
+        echo "ISSUE_EXISTS=$(if [[ $ISSUE_NUMBER ]]; then echo 'true'; else echo 'false'; fi)" >> $GITHUB_ENV;
+        echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_ENV;
+        echo "PR_EXISTS=$(if [[ $PR_NUMBER ]]; then echo 'true'; else echo 'false'; fi)" >> $GITHUB_ENV;
+
+    - name: Close open issue
+      if: env.ISSUE_EXISTS == 'true' && env.PR_EXISTS == 'false'
+      uses: peter-evans/close-issue@v2
+      with:
+        issue-number: ${{ env.ISSUE_NUMBER }}
+        comment: |
+          Auto-closing this issue because the Pull Request it was created for was closed.
+
+    # When the "Close open issue" step closes issue we need to set env variable ISSUE_EXISTS to False.
+    # If we don't set it then "Wait for build to succeed" step won't start and we won't get build status and
+    # next step "Create an issue" won't create a new issue
+    - name: Set ISSUE_EXISTS to False
+      if: (env.ISSUE_EXISTS == 'true' && env.PR_EXISTS == 'false')
+      run: echo "ISSUE_EXISTS=false" >> $GITHUB_ENV
+
     # Checkout the repository to the GitHub Actions runner.
     - name: Checkout reboot-dev/respect
       uses: actions/checkout@v2
@@ -75,7 +115,7 @@ jobs:
         # Deploy Keys would be, but works for all repositories that we need to
         # pull, allowing us to do a single `checkout` to get our full source
         # tree. Hence we have our `Rebot` user, and use a PAT for that user.
-        token: ${{ secrets.private_repo_access_as_rebot_token }}
+        token: ${{ secrets.PRIVATE_REPO_ACCESS_AS_REBOT_TOKEN }}
         submodules: recursive
 
     # Update references per each submodule path.
@@ -113,7 +153,7 @@ jobs:
         # use a Personal Access Token instead. See docs:
         #   https://github.com/peter-evans/create-pull-request/blob/main/docs/concepts-guidelines.md#triggering-further-workflow-runs
         # We re-use the one use to pull the repo, above.
-        token: ${{ secrets.private_repo_access_as_rebot_token }}
+        token: ${{ secrets.PRIVATE_REPO_ACCESS_AS_REBOT_TOKEN }}
         # The following email address is Rebot's GitHub address - see:
         #   https://github.com/settings/emails
         committer: Rebot <96078724+reboot-dev-bot@users.noreply.github.com>
@@ -137,11 +177,11 @@ jobs:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         number: ${{ steps.pr.outputs.pull-request-number }}
 
-    # The following three steps aim to create issue in case PR checks failed.
-    #
     # Here we are waiting for the PR check status in order to use it in next steps.
     # See docs: https://github.com/marketplace/actions/wait-for-check
     - name: Wait for build to succeed
+      # If the issue already exists, we don't need to wait, because the only reason we wait is to decide whether to open the issue.
+      if: env.ISSUE_EXISTS == 'false' && (steps.pr.outputs.pull-request-operation == 'created' || steps.pr.outputs.pull-request-operation == 'updated')
       uses: fountainhead/action-wait-for-check@v1.0.0
       id: wait-for-build
       with:
@@ -150,44 +190,13 @@ jobs:
         ref: ${{ steps.pr.outputs.pull-request-head-sha }}
         timeoutSeconds: 3600
 
-    # The following step checks whether the issue has already been created or not for the same submodule.
-    # Absence of this step leads to new issues creation on every submodule sync error.
-    # If the issue has already been created the next step "Create an issue" will be skipped.
-    - name: Check if issue already exists
-      # Environment variables to get owner and repository values to use them in `curl` then
-      env:
-        # The environment variable returns the owner and repository name.
-        # For example, reboot-dev/respect.
-        # See docs:
-        # https://docs.github.com/en/actions/learn-github-actions/contexts#example-contents-of-the-github-context
-        REPO: ${{ github.repository }}
-      # The condition below gets list of existing issues using wildcard and
-      # generates ISSUE_EXISTS flag and places it to $GITHUB_ENV to use it next step then.
-      # If issue exists it get its number to use in step to automatically close it when checks succeed.
-      # The folowing style of command is YAML folded style (with '>') which is supported by GitHub Actions.
-      # Newlines will be replaced with spaces converting the code to one line.
-      # The API URL below is used to search open issues with specific title.
-      # See docs: https://docs.github.com/en/rest/reference/search#search-issues-and-pull-requests--parameters
-      run: >
-        GET_ISSUE_NUMBER=$(curl -s --request GET
-        --url https://api.github.com/search/issues\?q=is:issue+is:open+repo:${REPO}+in:title+Submodule+sync+failed+for+"${{ matrix.path }}"
-        --header 'Authorization: token ${{ secrets.private_repo_access_as_rebot_token }}' | jq -r ".items[].number" | head -n 1);
-        if [[ $GET_ISSUE_NUMBER ]]; then
-        echo "Issue exists, skipping next step";
-        echo "ISSUE_EXISTS=true" >> $GITHUB_ENV;
-        echo "ISSUE_NUMBER=$GET_ISSUE_NUMBER" >> $GITHUB_ENV;
-        else
-        echo "Issue doesn't exist.";
-        echo "ISSUE_EXISTS=false" >> $GITHUB_ENV;
-        fi
-
     # In case checks of PR failed and the issue hadn't been created before the following action creates issue.
     # See docs: https://github.com/actions-ecosystem/action-create-issue
     - name: Create an issue
-      if: steps.wait-for-build.outputs.conclusion == 'failure' && env.ISSUE_EXISTS == 'false'
+      if: steps.wait-for-build.outputs.conclusion == 'failure'
       uses: actions-ecosystem/action-create-issue@v1
       with:
-        github_token: ${{ secrets.private_repo_access_as_rebot_token }}
+        github_token: ${{ secrets.PRIVATE_REPO_ACCESS_AS_REBOT_TOKEN }}
         title: Submodule sync failed for "${{ matrix.path }}"
         body: |
           ## Please check the PR for submodule "${{ matrix.path }}"
@@ -203,6 +212,7 @@ jobs:
     # If it doesn't exist the action returns error but doesn't fail the whole job (by default).
     # See docs: https://github.com/actions-ecosystem/action-remove-labels
     - name: Remove label "mergequeue-failed"
+      if: steps.pr.outputs.pull-request-operation == 'created' || steps.pr.outputs.pull-request-operation == 'updated'
       uses: actions-ecosystem/action-remove-labels@v1
       with:
         number: ${{ steps.pr.outputs.pull-request-number }}
@@ -212,15 +222,8 @@ jobs:
     # "Create Pull Request or update existing" in order to merge the changes in automatic mode.
     # See docs of the action: https://github.com/actions-ecosystem/action-add-labels
     - name: Add label "mergequeue-ready"
+      if: steps.pr.outputs.pull-request-operation == 'created' || steps.pr.outputs.pull-request-operation == 'updated'
       uses: actions-ecosystem/action-add-labels@v1
       with:
         number: ${{ steps.pr.outputs.pull-request-number }}
         labels: mergequeue-ready
-
-    - name: Close issue if submodule-sync PR checks succeed
-      if: steps.wait-for-build.outputs.conclusion == 'success' && env.ISSUE_EXISTS == 'true'
-      uses: peter-evans/close-issue@v2
-      with:
-        issue-number: ${{ env.ISSUE_NUMBER }}
-        comment: |
-          Auto-closing this issue because checks for the [PR](${{ steps.pr.outputs.pull-request-url }}) succeeded.
