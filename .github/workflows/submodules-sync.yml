@@ -21,7 +21,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v2
         with:
-          token: ${{ secrets.PRIVATE_REPO_ACCESS_AS_REBOT_TOKEN }}
+          token: ${{ secrets.private_repo_access_as_rebot_token }}
           submodules: recursive
       - id: set-matrix
         name: Set matrix based on modified submodules
@@ -74,10 +74,10 @@ jobs:
       run: >
         PR_NUMBER=$(curl -s --request GET
         --url https://api.github.com/search/issues\?q=is:pull-request+is:open+repo:${{ github.repository }}+in:title+Submodule-sync+${{ matrix.path }}+Update+submodule+to+its+latest+version
-        --header 'Authorization: token ${{ secrets.PRIVATE_REPO_ACCESS_AS_REBOT_TOKEN }}' | jq -r ".items[].number" | head -n 1);
+        --header 'Authorization: token ${{ secrets.private_repo_access_as_rebot_token }}' | jq -r ".items[].number" | head -n 1);
         ISSUE_NUMBER=$(curl -s --request GET
         --url https://api.github.com/search/issues\?q=is:issue+is:open+repo:${{ github.repository }}+in:title+Submodule+sync+failed+for+"${{ matrix.path }}"
-        --header 'Authorization: token ${{ secrets.PRIVATE_REPO_ACCESS_AS_REBOT_TOKEN }}' | jq -r ".items[].number" | head -n 1);
+        --header 'Authorization: token ${{ secrets.private_repo_access_as_rebot_token }}' | jq -r ".items[].number" | head -n 1);
         echo "ISSUE_NUMBER=$ISSUE_NUMBER" >> $GITHUB_ENV;
         echo "ISSUE_EXISTS=$(if [[ $ISSUE_NUMBER ]]; then echo 'true'; else echo 'false'; fi)" >> $GITHUB_ENV;
         echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_ENV;
@@ -113,7 +113,7 @@ jobs:
         # Deploy Keys would be, but works for all repositories that we need to
         # pull, allowing us to do a single `checkout` to get our full source
         # tree. Hence we have our `Rebot` user, and use a PAT for that user.
-        token: ${{ secrets.PRIVATE_REPO_ACCESS_AS_REBOT_TOKEN }}
+        token: ${{ secrets.private_repo_access_as_rebot_token }}
         submodules: recursive
 
     # Update references per each submodule path.
@@ -151,7 +151,7 @@ jobs:
         # use a Personal Access Token instead. See docs:
         #   https://github.com/peter-evans/create-pull-request/blob/main/docs/concepts-guidelines.md#triggering-further-workflow-runs
         # We re-use the one use to pull the repo, above.
-        token: ${{ secrets.PRIVATE_REPO_ACCESS_AS_REBOT_TOKEN }}
+        token: ${{ secrets.private_repo_access_as_rebot_token }}
         # The following email address is Rebot's GitHub address - see:
         #   https://github.com/settings/emails
         committer: Rebot <96078724+reboot-dev-bot@users.noreply.github.com>
@@ -194,7 +194,7 @@ jobs:
       if: steps.wait-for-build.outputs.conclusion == 'failure'
       uses: actions-ecosystem/action-create-issue@v1
       with:
-        github_token: ${{ secrets.PRIVATE_REPO_ACCESS_AS_REBOT_TOKEN }}
+        github_token: ${{ secrets.private_repo_access_as_rebot_token }}
         title: Submodule sync failed for "${{ matrix.path }}"
         body: |
           ## Please check the PR for submodule "${{ matrix.path }}"
