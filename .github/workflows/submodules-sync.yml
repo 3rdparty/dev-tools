@@ -54,7 +54,7 @@ jobs:
     # We set strategy matrix to work with changes of each submodule separately.
     strategy:
       matrix:
-         path: ${{ fromJson(needs.build-matrix.outputs.path_matrix) }}
+        path: ${{ fromJson(needs.build-matrix.outputs.path_matrix) }}
     defaults:
       run:
         shell: bash
