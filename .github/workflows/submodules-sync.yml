@@ -6,9 +6,15 @@ name: Submodules Sync
 
 on:
   workflow_call:
+    inputs:
+      scripts_directory:
+        required: true
     secrets:
       private_repo_access_as_rebot_token:
         required: true
+
+env:
+  SCRIPTS_DIRECTORY: ${{ inputs.scripts_directory }}
 
 jobs:
   # Since we want to create one PR per each submodule on submodule change
@@ -25,16 +31,8 @@ jobs:
           submodules: recursive
       - id: set-matrix
         name: Set matrix based on modified submodules
-        run: |
-          # Update references.
-          git submodule update --recursive --remote
-          # The following condition is needed to set required outputs.
-          # The step generates one output: `path_matrix`.
-          # `path_matrix` output contains list of all submodules within a repo.
-          # The flag is used by the main build job.
-          echo "::set-output name=path_matrix::[$(git config --file .gitmodules --get-regexp path | \
-          awk '{ print $2 }' | \
-          awk '{ printf "%s\"%s\"", (NR==1?"":", "), $0 } END{ print "" }')]"
+        run: ./per-submodule-build-matrix.sh
+        working-directory: ${{ env.SCRIPTS_DIRECTORY }}
     outputs:
       path_matrix: ${{ steps.set-matrix.outputs.path_matrix }}
 
@@ -60,28 +58,20 @@ jobs:
         shell: bash
 
     steps:
+    - name: Checkout repo
+      uses: actions/checkout@v2
+      with:
+        token: ${{ secrets.private_repo_access_as_rebot_token }}
+        submodules: recursive
     # The following step checks whether the issue and pull request have already been created or not for the same
     # submodule.
     - name: Check if PR and issue already exist
-      # The API URLs in conditions below search for any existing pull requests and issues using wildcard and
-      # generates ISSUE_EXISTS and PR_EXISTS environment variables and places those in the environment for next steps
-      # through $GITHUB_ENV;
-      # See https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#setting-an-environment-variable
-      # See docs: https://docs.github.com/en/rest/reference/search#search-issues-and-pull-requests--parameters
-      # If the issue exists we also set the `ISSUE_NUMBER` environment variable.
-      # The folowing style of command is YAML folded style (with '>') which is supported by GitHub Actions.
-      # Newlines will be replaced with spaces converting the code to one line.
-      run: >
-        PR_NUMBER=$(curl -s --request GET
-        --url https://api.github.com/search/issues\?q=is:pull-request+is:open+repo:${{ github.repository }}+in:title+Submodule-sync+${{ matrix.path }}+Update+submodule+to+its+latest+version
-        --header 'Authorization: token ${{ secrets.private_repo_access_as_rebot_token }}' | jq -r ".items[].number" | head -n 1);
-        ISSUE_NUMBER=$(curl -s --request GET
-        --url https://api.github.com/search/issues\?q=is:issue+is:open+repo:${{ github.repository }}+in:title+Submodule+sync+failed+for+"${{ matrix.path }}"
-        --header 'Authorization: token ${{ secrets.private_repo_access_as_rebot_token }}' | jq -r ".items[].number" | head -n 1);
-        echo "ISSUE_NUMBER=$ISSUE_NUMBER" >> $GITHUB_ENV;
-        echo "ISSUE_EXISTS=$(if [[ $ISSUE_NUMBER ]]; then echo 'true'; else echo 'false'; fi)" >> $GITHUB_ENV;
-        echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_ENV;
-        echo "PR_EXISTS=$(if [[ $PR_NUMBER ]]; then echo 'true'; else echo 'false'; fi)" >> $GITHUB_ENV;
+      env:
+        MATRIX_PATH: ${{ matrix.path }}
+        REPO: ${{ github.repository }}
+        GITHUB_TOKEN: ${{ secrets.private_repo_access_as_rebot_token }}
+      run: ./check-if-issue-and-pr-exist.sh
+      working-directory: ${{ env.SCRIPTS_DIRECTORY }}
 
     - name: Close open issue
       if: env.ISSUE_EXISTS == 'true' && env.PR_EXISTS == 'false'
