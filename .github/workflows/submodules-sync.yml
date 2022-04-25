@@ -9,6 +9,7 @@ on:
     inputs:
       scripts_directory:
         required: true
+        type: string
     secrets:
       private_repo_access_as_rebot_token:
         required: true
