@@ -15,7 +15,7 @@ on:
         required: true
 
 env:
-  SCRIPTS_DIRECTORY: ${{ inputs.devtools_directory }}/.github/workflow/scripts
+  SCRIPTS_DIRECTORY: ${{ inputs.devtools_directory }}/.github/workflows/scripts
 
 jobs:
   # Since we want to create one PR per each submodule on submodule change
