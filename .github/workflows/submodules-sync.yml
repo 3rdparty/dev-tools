@@ -7,7 +7,7 @@ name: Submodules Sync
 on:
   workflow_call:
     inputs:
-      scripts_directory:
+      devtools_directory:
         required: true
         type: string
     secrets:
@@ -15,7 +15,7 @@ on:
         required: true
 
 env:
-  SCRIPTS_DIRECTORY: ${{ inputs.scripts_directory }}
+  SCRIPTS_DIRECTORY: ${{ inputs.devtools_directory }}/.github/workflow/scripts
 
 jobs:
   # Since we want to create one PR per each submodule on submodule change
