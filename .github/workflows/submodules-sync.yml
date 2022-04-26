@@ -68,10 +68,9 @@ jobs:
     # submodule.
     - name: Check if PR and issue already exist
       env:
-        MATRIX_PATH: ${{ matrix.path }}
         REPO: ${{ github.repository }}
         GITHUB_TOKEN: ${{ secrets.private_repo_access_as_rebot_token }}
-      run: ./check-if-issue-and-pr-exist.sh
+      run: ./check-if-issue-and-pr-exist.sh Submodule-sync+${{ matrix.path }}+Update+submodule+to+its+latest+version Submodule+sync+failed+for+"${{ matrix.path }}"
       working-directory: ${{ env.SCRIPTS_DIRECTORY }}
 
     - name: Close open issue
