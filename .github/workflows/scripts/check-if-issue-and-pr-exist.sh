@@ -1,5 +1,7 @@
 #!/bin/bash
-# The scripts requires the $REPO and $GITHUB_TOKEN to be presented in environment variables.
+# The scripts requires the REPO and GITHUB_TOKEN to be presented in environment variables.
+# REPO is repository owner and name, e.g. 'reboot-dev/dev-tools'
+# GITHUB_TOKEN is a GitHub Personal Access Token
 
 # The scripts gets Pull Request and Issue titles as arguments.
 # Any spaces in the titles must be replaced with "+".
