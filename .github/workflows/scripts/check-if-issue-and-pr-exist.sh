@@ -1,7 +1,13 @@
 #!/bin/bash
+# The scripts requires the $REPO and $GITHUB_TOKEN to be presented in environment variables.
 
-PR_TITLE=$1
-ISSUE_TITLE=$2
+# The scripts gets Pull Request and Issue titles as arguments.
+# Any spaces in the titles must be replaced with "+".
+# Usage example:
+# ./check-if-issue-and-pr-exist.sh Submodule-sync+Update+submodule+to+its+latest+version Submodule+sync+failed+for+repo
+
+PR_TITLE=$1     # Pull Request title - the first argument
+ISSUE_TITLE=$2  # Issue title - the second argument
 
 # The API URLs in conditions below search for any existing pull requests and issues using wildcard and
 # generates ISSUE_EXISTS and PR_EXISTS environment variables and places those in the environment for next steps
