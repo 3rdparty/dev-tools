@@ -14,7 +14,7 @@ env:
   SCRIPTS_DIRECTORY: ${{ inputs.devtools_directory }}/.github/workflows/scripts
 
 jobs:
-  run-tests:
+  check-format-style:
     name: Check Python format style
     runs-on: ubuntu-latest
     steps:
