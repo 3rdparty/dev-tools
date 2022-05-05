@@ -1,0 +1,29 @@
+# The workflow uses YAPF to check Python format style
+# See docs: https://github.com/google/yapf
+
+name: Check Python format style
+
+on:
+  workflow_call:
+    inputs:
+      devtools_directory:
+        required: true
+        type: string
+
+env:
+  SCRIPTS_DIRECTORY: ${{ inputs.devtools_directory }}/.github/workflows/scripts
+
+jobs:
+  run-tests:
+    name: Check Python format style
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout ${{ github.repository }}
+        uses: actions/checkout@v2
+      - name: Install YAPF
+        run: pip install yapf
+      - name: Check style
+        shell: bash
+        working-directory: ${{ env.SCRIPTS_DIRECTORY }}
+        run: ./check-format-style.sh
+
