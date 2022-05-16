@@ -37,4 +37,11 @@ do
 
 done < "$file"
 
+# Check for existence of buildifier.
+which buildifier >/dev/null
+if [[ $? != 0 ]]; then
+  printf "Failed to find 'buildifier'\n"
+  exit 1
+fi
+
 buildifier $file
