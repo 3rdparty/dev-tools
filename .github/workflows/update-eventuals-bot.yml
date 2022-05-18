@@ -54,7 +54,7 @@ jobs:
       # submodule.
       - name: Check if PR and issue already exist
         env:
-          REPO: ${{ github.repository }}
+          REPO: ${{ inputs.owner }}/${{ inputs.repo_name }}
           GITHUB_TOKEN: ${{ secrets.private_repo_access_as_rebot_token }}
         run: ./check-if-issue-and-pr-exist.sh Update+eventuals Updating+eventuals+failed
         working-directory: ${{ inputs.devtools_directory }}/.github/workflows/scripts
