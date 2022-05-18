@@ -32,8 +32,8 @@ jobs:
       - name: Grab current commit and shallow_since
         id: current_info
         run: |
-          echo ::set-output name=current_commit::$(git log -n 1 --pretty=format:"%H")
-          echo ::set-output name=current_shallow_since::$(git log -n 1 --date=raw --pretty=format:"%cd")   
+          echo ::set-output name=latest_commit::$(git log -n 1 --pretty=format:"%H")
+          echo ::set-output name=latest_shallow_since::$(git log -n 1 --date=raw --pretty=format:"%cd")   
 
       - uses: actions/checkout@v3
         with:
@@ -44,10 +44,10 @@ jobs:
 
       - name: Update WORKSPACE.bazel
         run: |
-          current_commit="${{ steps.current_info.outputs.current_commit }}"
-          current_shallow_since="${{ steps.current_info.outputs.current_shallow_since }}"
+          commit="${{ steps.current_info.outputs.latest_commit }}"
+          shallow_since="${{ steps.current_info.outputs.latest_shallow_since }}"
           chmod +x ${{ inputs.devtools_directory }}/.github/workflows/scripts/update-eventuals-git-repository.sh
-          ${{ inputs.devtools_directory }}/.github/workflows/scripts/update-eventuals-git-repository.sh WORKSPACE.bazel $current_commit "$current_shallow_since"
+          ${{ inputs.devtools_directory }}/.github/workflows/scripts/update-eventuals-git-repository.sh WORKSPACE.bazel $commit "$shallow_since"
         shell: bash
 
       # The following step checks whether the issue and pull request have already been created or not for the same
@@ -141,6 +141,8 @@ jobs:
       #   with:
       #     number: ${{ steps.pr.outputs.pull-request-number }}
       #     labels: mergequeue-failed
+      #     repo: ${{ inputs.owner }}/${{ inputs.repo_name }}
+      #     github_token: ${{ secrets.private_repo_access_as_rebot_token }}
 
       # We add "mergequeue-ready" label to the pull request created or updated in the step
       # "Create Pull Request or update existing" in order to merge the changes in automatic mode.
@@ -150,4 +152,6 @@ jobs:
       #   uses: actions-ecosystem/action-add-labels@v1
       #   with:
       #     number: ${{ steps.pr.outputs.pull-request-number }}
-      #     labels: mergequeue-ready  
+      #     labels: mergequeue-ready
+      #     repo: ${{ inputs.owner }}/${{ inputs.repo_name }}
+      #     github_token: ${{ secrets.private_repo_access_as_rebot_token }}
