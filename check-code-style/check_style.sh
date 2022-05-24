@@ -24,11 +24,21 @@ check_version() {
 # clang-format because we clang-format to respect programmer added
 # newlines in places where it makes the code easier to read than what
 # clang-format might have done itself.
+# To skip the length check for a line (e.g. for a long URL), put 
+# "check_line_length skip" in a comment on the previous line.
 check_line_length() {
   local file="${1}"
   local -i status=0
   local -i number=1
+  local -i skip_next_line=0
   while IFS= read -r line; do
+    if (( skip_next_line )); then
+      (( skip_next_line-- ))
+      continue
+    fi
+    if [[ $line == *"check_line_length skip"* ]]; then
+      skip_next_line=1
+    fi
     local -i length=${#line}
     if (( length > 80 )); then
       status=1
