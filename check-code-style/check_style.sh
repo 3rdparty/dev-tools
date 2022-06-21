@@ -96,7 +96,7 @@ check_clang_format() {
 
   # Retain the part before `-`.
   clang_format_version_found=${clang_format_version_found%-*}
-  clang_format_version_required="12.0.0"
+  clang_format_version_required="13.0.0"
 
   check_version ${clang_format_version_found} ${clang_format_version_required}
 
