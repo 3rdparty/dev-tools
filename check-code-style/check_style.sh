@@ -1,13 +1,12 @@
 #!/bin/bash
 
 # We need this export to enable color output to the terminal using GitHub
-# Actions. If no, we will get the error while using commands in bash such
-# as `tput`.
+# Actions. If no, we will get the error while using commands in bash such as
+# `tput`.
 export TERM=xterm-color
 
-# Helper that returns 0 if the version in the first argument is
-# greater than or equal to the version in the second argument,
-# otherwise returns 1.
+# Helper that returns 0 if the version in the first argument is greater than or
+# equal to the version in the second argument, otherwise returns 1.
 check_version() {
   local found="${1}"
   local required="${2}"
@@ -19,13 +18,13 @@ check_version() {
   [[ "${oldest}" == "${required}" ]]
 }
 
-# Helper that takes a file and ensures it doesn't have lines exceeding
-# 80 characters. Note that we do this check here versus using
-# clang-format because we clang-format to respect programmer added
-# newlines in places where it makes the code easier to read than what
-# clang-format might have done itself.
-# To skip the length check for a line (e.g. for a long URL), put 
-# "check_line_length skip" in a comment on the previous line.
+# Helper that takes a file and ensures it doesn't have lines exceeding 80
+# characters. Note that we do this check here versus using clang-format because
+# we clang-format to respect programmer added newlines in places where it makes
+# the code easier to read than what clang-format might have done itself.
+# To skip the length check for a line (e.g. for a long URL), put
+# "check_line_length skip" in a comment on the previous line or at the very end
+# of an already long line.
 check_line_length() {
   local file="${1}"
   local -i status=0
@@ -34,11 +33,17 @@ check_line_length() {
   while IFS= read -r line; do
     if [[ $skip_next_line == true ]]; then
       skip_next_line=false
-      continue
+      (( number++ )) && continue
     fi
     if [[ $line == *"check_line_length skip"* ]]; then
       skip_next_line=true
     fi
+
+    # Skip line if a line contains the magic "check_line_length skip" string at
+    # the very end.
+    (echo $line | grep -Eq '^.*check_line_length skip$') &&
+      (( number++ )) && continue
+
     local -i length=${#line}
     if (( length > 80 )); then
       status=1
