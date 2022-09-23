@@ -5,6 +5,10 @@ name: "Check Code Style"
 desciption: "Check files for correct code style"
 
 inputs:
+  buildifier-version:
+    description: "Version of 'buildifier' to install"
+    required: false
+    default: '5.1.0'
   os:
     description: "Specify operating system on which this action will run"
 
@@ -45,12 +49,12 @@ runs:
 
     - name: Install buildifier for .bzl files (macos)
       if: inputs.os == 'macos-latest'
-      run: brew install buildifier
+      run: brew install buildifier@${{ inputs.buildifier-version }}
       shell: bash
 
     - name: Install buildifier for .bzl files (ubuntu)
       if: inputs.os == 'ubuntu-latest'
-      run: /home/linuxbrew/.linuxbrew/bin/brew install buildifier
+      run: /home/linuxbrew/.linuxbrew/bin/brew install buildifier@${{ inputs.buildifier-version }}
       shell: bash
 
     - name: Check all .bzl, .bazel files for correct code style
