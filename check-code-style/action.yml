@@ -9,14 +9,12 @@ inputs:
     description: "Version of 'buildifier' to install"
     required: false
     default: '5.1.0'
-  os:
-    description: "Specify operating system on which this action will run"
 
 runs:
   using: "composite"
   steps:
     - name: Install clang-format-13 if Ubuntu
-      if: inputs.os == 'ubuntu-latest'
+      if: ${{ runner.os == 'Linux' }}
       run: |
         # Install Clang 13 (including clang-format-13) through LLVM's preferred mechanism:
         #   https://apt.llvm.org/
@@ -33,7 +31,7 @@ runs:
 
     # On macOS we should install clang-format.
     - name: Install clang-format-13 if macOS
-      if: inputs.os == 'macos-latest'
+      if: ${{ runner.os == 'macOS' }}
       run: |
         # TODO(benh): is 'brew' not in PATH on macOS like it is not in
         # the PATH for Linux? If so, where does GitHub install 'brew'
@@ -47,13 +45,13 @@ runs:
         ${{ github.action_path }}/check_style_of_all_files.sh
       shell: bash
 
-    - name: Install buildifier for .bzl files (macos)
-      if: inputs.os == 'macos-latest'
+    - name: Install buildifier for .bzl files (macOS)
+      if: ${{ runner.os == 'macOS' }}
       run: brew install buildifier@${{ inputs.buildifier-version }}
       shell: bash
 
-    - name: Install buildifier for .bzl files (ubuntu)
-      if: inputs.os == 'ubuntu-latest'
+    - name: Install buildifier for .bzl files (Linux)
+      if: ${{ runner.os == 'Linux' }}
       run: /home/linuxbrew/.linuxbrew/bin/brew install buildifier@${{ inputs.buildifier-version }}
       shell: bash
 
