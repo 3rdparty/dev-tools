@@ -165,31 +165,6 @@ jobs:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         number: ${{ steps.pr.outputs.pull-request-number }}
 
-    # Here we are waiting for the PR check status in order to use it in next steps.
-    # See docs: https://github.com/marketplace/actions/wait-for-check
-    - name: Wait for build to succeed
-      # If the issue already exists, we don't need to wait, because the only reason we wait is to decide whether to open the issue.
-      if: env.ISSUE_EXISTS == 'false' && (steps.pr.outputs.pull-request-operation == 'created' || steps.pr.outputs.pull-request-operation == 'updated')
-      uses: fountainhead/action-wait-for-check@v1.0.0
-      id: wait-for-build
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        checkName: 'Build and Test'
-        ref: ${{ steps.pr.outputs.pull-request-head-sha }}
-        timeoutSeconds: 3600
-
-    # In case checks of PR failed and the issue hadn't been created before the following action creates issue.
-    # See docs: https://github.com/actions-ecosystem/action-create-issue
-    - name: Create an issue
-      if: steps.wait-for-build.outputs.conclusion == 'failure'
-      uses: actions-ecosystem/action-create-issue@v1
-      with:
-        github_token: ${{ secrets.private_repo_access_as_rebot_token }}
-        title: Submodule sync failed for "${{ matrix.path }}"
-        body: |
-          ## Please check the PR for submodule "${{ matrix.path }}"
-          Pull Request URL - ${{ steps.pr.outputs.pull-request-url }}
-
     # The "mergequeue-failed" label gets added by the Mergequeue bot when it has previously seen
     # the mergequeue-ready label on a PR but the checks failed and Mergequeue couldn't merge the PR.
     # When that happens it removes the "mergequeue-ready" label and adds "mergequeue-failed".
