@@ -16,7 +16,7 @@ runs:
       run: |
         # Install Clang 13 (including clang-format-13) through LLVM's preferred mechanism:
         #   https://apt.llvm.org/
-        wget https://apt.llvm.org/llvm.sh 
+        wget https://apt.llvm.org/llvm.sh
         chmod +x llvm.sh
         sudo ./llvm.sh 13
         rm ./llvm.sh
@@ -54,7 +54,12 @@ runs:
       shell: bash
 
     - name: Check all .bzl, .bazel files for correct code style
+      # Since the `buildifier` binary used by `check_style_bzl.sh` is installed
+      # by `brew`, and since `brew`'s binaries are not placed on the `$PATH` on
+      # GitHub's machines, we must manualy put it on the path by `eval`ing
+      # `brew shellenv`.
       run: |
+        eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
         chmod +x ${{ github.action_path }}/check_style_bzl.sh
         ${{ github.action_path }}/check_style_bzl.sh
       shell: bash
