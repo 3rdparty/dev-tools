@@ -45,7 +45,7 @@ do
         tput bold # Bold text in terminal.
         printf "Command to format ${file}: "
         tput setaf 2 # Green font in terminal.
-        printf "buildifier "${file}"\n"
+        printf "buildifier --lint=fix --warnings=all "${file}"\n"
         tput sgr0 # Reset terminal.
         tput bold
         printf "If you have no buildifier install it with the command: \n"
