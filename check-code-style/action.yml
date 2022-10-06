@@ -64,7 +64,20 @@ runs:
         ${{ github.action_path }}/check_style_bzl.sh
       shell: bash
 
+    - name: Determine whether there are any Python files
+      id: find-python
+      # The incantation here will set the `found` output for this step to 'true'
+      # if there is a *.py file in the path that the YAPF action would check.
+      run: |
+        if [[ -n $(find . -name *.py -not -path "**/submodules/**") ]]; then
+          echo ::set-output name=found::true
+        fi
+      shell: bash
+
     - name: Run YAPF to test if Python code is correctly formatted
+      # We only run YAPF when there are Python files to be checked, since YAPF
+      # errors out when there aren't.
+      if: steps.find-python.outputs.found == 'true'
       uses: AlexanderMelde/yapf-action@master
       with:
         args: --verbose --exclude '**/submodules/**'
