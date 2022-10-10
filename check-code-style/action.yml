@@ -64,6 +64,8 @@ runs:
         ${{ github.action_path }}/check_style_bzl.sh
       shell: bash
 
+    # TODO(rjh): consider replacing this with 'dorny/paths-filter@v2' rather than us rolling our own
+    # filter checking code.
     - name: Determine whether there are any Python files
       id: find-python
       # The incantation here will set the `found` output for this step to 'true'
