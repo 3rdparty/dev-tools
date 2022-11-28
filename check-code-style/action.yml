@@ -72,7 +72,7 @@ runs:
       # if there is a *.py file in the path that the YAPF action would check.
       run: |
         if [[ -n $(find . -name *.py -not -path "**/submodules/**") ]]; then
-          echo ::set-output name=found::true
+          echo "found=true" >> $GITHUB_OUTPUT
         fi
       shell: bash
 
