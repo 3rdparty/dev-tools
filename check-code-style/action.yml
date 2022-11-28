@@ -84,6 +84,19 @@ runs:
       with:
         args: --verbose --exclude '**/submodules/**'
 
+    - name: Determine if isort is set up for this repo
+      id: find-isort
+      run: |
+        ISORT_CONFIG_FILE_PATH='./.isort.cfg'
+        if [ -f "$ISORT_CONFIG_FILE_PATH" ]; then
+          echo ::set-output name=found::true
+        fi
+      shell: bash
+
+    - name: Run isort to test if Python imports are correctly formatted
+      if: steps.find-python.outputs.found == 'true' && steps.find-isort.outputs.found == 'true'
+      uses: isort/isort-action@v1.1.0
+
     - name: Check JSON, YAML, Markdown, and more with Prettier
       uses: creyD/prettier_action@v4.2
       with:
