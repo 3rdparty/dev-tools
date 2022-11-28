@@ -89,7 +89,7 @@ runs:
       run: |
         ISORT_CONFIG_FILE_PATH='./.isort.cfg'
         if [ -f "$ISORT_CONFIG_FILE_PATH" ]; then
-          echo ::set-output name=found::true
+          echo "found=true" >> $GITHUB_OUTPUT
         fi
       shell: bash
 
