@@ -95,7 +95,15 @@ runs:
 
     - name: Run isort to test if Python imports are correctly formatted
       if: steps.find-python.outputs.found == 'true' && steps.find-isort.outputs.found == 'true'
-      uses: isort/isort-action@v1.1.0
+      id: run-isort
+      shell: bash
+      # Install and run `isort` manually instead of using the GitHub Action
+      # provided by the community; that action swallows the STDOUT, so we won't
+      # be told what's wrong with our diffs.
+      # The chosen version of isort is the version installed on our Codespaces.
+      run: |
+        pip install isort==5.10.1
+        isort --check --diff .
 
     - name: Check JSON, YAML, Markdown, and more with Prettier
       uses: creyD/prettier_action@v4.2
