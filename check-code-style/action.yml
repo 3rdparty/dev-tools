@@ -82,7 +82,7 @@ runs:
       if: steps.find-python.outputs.found == 'true'
       uses: AlexanderMelde/yapf-action@master
       with:
-        args: --verbose --exclude '**/submodules/**'
+        args: --verbose --exclude '**/submodules/**' --style '{based_on_style:google,indent_width:4,column_limit:79}'
 
     - name: Determine if isort is set up for this repo
       id: find-isort
