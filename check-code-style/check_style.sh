@@ -35,6 +35,13 @@ check_line_length() {
       skip_next_line=false
       (( number++ )) && continue
     fi
+    # If a single line says "ignore", then ignore all subsequent lines. This is
+    # useful for files imported from other sources that can't be formatted.
+    if [[ $line == *"check_line_length ignore"* ]]; then
+      return ${status}
+    fi
+    # If a line says "skip", then skip the next line. This is useful for single
+    # lines that are too long, but that can't be broken up.
     if [[ $line == *"check_line_length skip"* ]]; then
       skip_next_line=true
     fi
