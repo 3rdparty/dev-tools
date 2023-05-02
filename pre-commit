@@ -1,36 +1,6 @@
 #!/bin/bash
 
-# Check for existence of git.
-which git >/dev/null
-if [[ $? != 0 ]]; then
-  printf "Failed to find 'git' (please install or update your path)\n"
-  exit 1
-fi
-
-# Get top-level directory path.
-top_level_path=$(git rev-parse --show-toplevel)
-
-# Get the path to 'check_style.sh' file.
-check_style_sh_path=$(find ${top_level_path} | grep "dev-tools/check-code-style/check_style.sh")
-
-if [[ ${#check_style_sh_path} == 0 ]]; then
-  printf "There is no 'check_style.sh' in your repo!\n"
-  printf "Make sure you have submodule 'dev-tools' cloned and initialized from:\n"
-  printf "https://github.com/3rdparty/dev-tools \n"
-  exit 1
-fi
-
-source ${check_style_sh_path}
-
-run_checks(){
-   check_style_of_files_in_commit
-}
-
-case "$1" in
-  --help )
-    echo "Performs checks on files to be committed"
-    ;;
-  * )
-    run_checks
-    ;;
-esac
+# Run the check-style script from dev-tools as pre-commit hook.
+SCRIPTPATH="$(dirname -- "$( readlink -f -- "$0"; )")"
+CHECK_STYLE_SCRIPT="${SCRIPTPATH}/check-style.sh"
+exec $CHECK_STYLE_SCRIPT
