@@ -49,6 +49,9 @@ clang_format_files=$(get_files_by_extension .cc .cpp .h .hpp .proto)
 if [ ! -z "${clang_format_files}" ]; then
     # Run clang-format.
     run_check clang-format --dry-run -Werror --ferror-limit=0 $clang_format_files
+
+    # Run our homebrewed line length checker.
+    run_check "$(cd -- "$(dirname "$0")" >/dev/null 2>&1 && pwd -P)/check-line-length" $clang_format_files
 fi
 
 # Check python files

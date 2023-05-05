@@ -1,0 +1,110 @@
+#!/usr/bin/env python3
+import itertools
+import os
+import sys
+from io import StringIO
+from typing import Optional
+
+# The magic word to look for to ignore too long lines.
+# If the needle is present on either the line itself or the line before, the
+# line skip will be checked.
+SKIP_LINE_NEEDLE = 'check_line_length skip'
+# A magic word to skip line checking for the rest of the file.
+SKIP_REST_NEEDLE = 'check_line_length ignore'
+
+# The maximum allowd length of a line.
+# TODO: We wanted this to be 80, but we had an off-by-one error in previous
+# script, so for now we will stick to lines of length 81.
+MAX_LINE_LENGTH = 81
+
+# A line check result is a list of tuples for each found offending line in a
+# file. The tuple contains:
+# - file name ;
+# - (zero indexed) line number of the offending line ;
+# - the line content of the offending line.
+LineCheckResult = list[tuple[str, int, str]]
+
+
+def check_line_length(file_path: str) -> LineCheckResult:
+    """Check file for any un-annotated long lines."""
+
+    # Read in lines from the given file.
+    with open(file_path, 'r') as file:
+        enumerated_lines = list(enumerate(file.readlines()))
+
+    # Check if we need to ignore line checking after a certain point.
+    skip_lines_from: Optional[int] = None
+    try:
+        skip_lines_from = min(
+            [
+                line_number for (line_number, line) in enumerated_lines
+                if SKIP_REST_NEEDLE in line
+            ]
+        )
+    except ValueError as e:
+        skip_lines_from = None
+
+    # Find all lines with the ignore line annotation.
+    annotated_line_numbers = [
+        line_number for (line_number, line) in enumerated_lines
+        if SKIP_LINE_NEEDLE in line
+    ]
+
+    # Find all offending lines.
+    # A line is offending if the line length is longer than MAX_LINE_LENGTH and
+    # the line, the previous line, or the section of the file has not been
+    # annotated.
+    enumerated_offending_lines = []
+    for line_number, line in enumerated_lines:
+        if skip_lines_from is not None and line_number >= skip_lines_from:
+            break
+
+        if len(line) <= MAX_LINE_LENGTH:
+            continue
+
+        if line_number in annotated_line_numbers or line_number - 1 in annotated_line_numbers:
+            continue
+
+        enumerated_offending_lines.append((file.name, line_number, line))
+
+    return enumerated_offending_lines
+
+
+def print_line_check_result(result: LineCheckResult) -> None:
+    """Pretty print a line check result."""
+    for file_name, line_number, line in result:
+        print(f'{file_name}:{line_number+1}:{len(line)} {line.rstrip()}')
+
+
+if __name__ == '__main__':
+    import argparse
+    from multiprocessing import Pool
+
+    def existing_file(path: str) -> str:
+        """Helper function to ensure that file name passed on the command line
+        exists and is readable."""
+        assert os.path.isfile(path) and os.access(path, os.R_OK)
+        return path
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        'file',
+        type=existing_file,
+        nargs='+',
+        help='Path to files to check.',
+    )
+    args = parser.parse_args()
+
+    # Process all files given in parallel.
+    with Pool() as pool:
+        line_check_results: list[LineCheckResult] = pool.map(
+            check_line_length, args.file
+        )
+
+    # Squash result from all files into a single result and print it.
+    line_check_result = list(itertools.chain.from_iterable(line_check_results))
+    print_line_check_result(line_check_result)
+
+    # Return an appropriate status code.
+    status_code = len(line_check_result)
+    sys.exit(status_code)
