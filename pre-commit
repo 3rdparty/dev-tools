@@ -3,4 +3,4 @@
 # Run the check-style script from dev-tools as pre-commit hook.
 SCRIPTPATH="$(dirname -- "$( readlink -f -- "$0"; )")"
 CHECK_STYLE_SCRIPT="${SCRIPTPATH}/check-style.sh"
-exec $CHECK_STYLE_SCRIPT
+exec $CHECK_STYLE_SCRIPT --pre-commit

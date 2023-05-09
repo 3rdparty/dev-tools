@@ -1,12 +1,44 @@
 #!/bin/bash
-# This script runs the same code checks as are run in our github action runners,
-# as specified in `actions.yml`, namely:
+# This scripts runs our various code checks. Specifically it runs:
 # * check_style_of_all_files.sh - clang-format and extra line length checking).
-# * check_style_bzl.sh - buildifier, but 10x slower.
+# * buildifier
 # * yapf
 # * isort
 # * prettier
 #
+# The script has two modes in which it can operate:
+# * pre-commit - checks only the file in the current commit.
+# * full - checks all the files under version control.
+# To save time, we only run over the files in the current commit in the
+# precommit hook. We then run the more extensive full check as part of our
+# branch protection rules. For a fuller discussion, please see
+# https://github.com/reboot-dev/respect/issues/1374.
+#
+print_help() {
+    echo "Use as $0 [--full|--pre-commit]"
+    echo ""
+    echo " --full to check all files under version control."
+    echo " --pre-commit to check the files in the current commit."
+    echo ""
+}
+case $1 in
+    "--full" )
+        mode="full" # Used later to decide how to invoke clang format.
+        # Get all files under version control. These are the superset of files
+        # we will want to check.
+        affected_files=$(git ls-tree --full-tree --name-only -r HEAD)
+        ;;
+    "--pre-commit" )
+        mode="pre-commit" # Used later to decide how to invoke clang format.
+        # Get all files in current commit. We will restrict the checking to
+        # these.
+        affected_files=$(git diff --cached --name-only --diff-filter=ACM HEAD)
+        ;;
+    * )
+        echo "Unknown argument: $1"
+        print_help
+        exit 2
+esac
 
 
 # Unset variable would be a sign of programmer error. We are not using '-e' in
@@ -19,10 +51,6 @@ set -u
 git_root=$(git rev-parse --show-toplevel)
 cd "${git_root}"
 
-# Get all files under version control. These are the superset of files we will
-# want to check.
-affected_files=$(git ls-tree --full-tree --name-only -r HEAD)
-
 # Define a cummulative status code for the script. The value is Updated through
 # 'run_check' when running checks. A status code creater than 0 will indicate
 # that one or more checks failed.
@@ -30,8 +58,7 @@ status_code=0
 
 # Run a code check command and update the cummulative error code.
 run_check() {
-    echo $1
-    time $@
+    $@
     status_code=$(($status_code + $?))
 }
 
@@ -39,7 +66,8 @@ run_check() {
 get_files_by_extension() {
     filter=""
     for ext in $@; do
-        filter="\\.$(echo $ext | sed -e 's|^\.||')$|${filter}"
+        # We want a `.` to be a full stop, not a regexp wildcard.
+        filter="$(echo $ext | sed -e 's|^\.|\\.|')$|${filter}"
     done
     filter=$(echo $filter | sed -e 's/|$//')
 
@@ -55,18 +83,34 @@ if [ ! -z "${clang_format_files}" ]; then
     # ISSUE https://github.com/reboot-dev/respect/issues/1371: This script is
     # very slow as we process each file sequentially and does the line length
     # checking in bash.
+    #
+    # Depending on whether we are in pre-commit mode of full mode, we want to
+    # invoke these scripts differently:
+    # TODO: Consider tidying up this and perhaps solve #1371 in the process.
     dev_tools_path=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-    run_check "${dev_tools_path}/check-code-style/check_style_of_all_files.sh"
+    case $mode in
+        "full" )
+            # For full checking, we can invoke the wrapper script directly.
+            run_check "${dev_tools_path}/check-code-style/check_style_of_all_files.sh"
+        ;;
+        "pre-commit" )
+            # For the pre-commit check we must source another bash script and
+            # then we have a function available to us...
+            source "${dev_tools_path}/check-code-style/check_style.sh"
+            run_check check_style_of_files_in_commit
+        ;;
+        * )
+            # For safety catch these.
+            echo "Unsupported mode: $mode. This should not happen."
+            exit 1
+        ;;
+    esac
 fi
 
 # Check bazel files
 bazel_files=$(get_files_by_extension .bzl .bazel BUILD WORKSPACE)
 if [ ! -z "${bazel_files}" ]; then
-    # ISSUE https://github.com/reboot-dev/respect/issues/1383: This script is
-    # about 10 times slower than invoking buildifier directly and it doesn't do
-    # much more.
-    dev_tools_path=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-    run_check "${dev_tools_path}/check-code-style/check_style_bzl.sh"
+    run_check buildifier --lint=warn --warnings=all --mode=check
 fi
 
 # Check python files.

@@ -10,8 +10,9 @@ check_style_of_all_files() {
   # anyone using this can exclude what ever directory they want rather than assume
   # that everyone using this will want to exclude the 'submodules' directory.
   # NOTE: do not forget to do the same in the 'check_style_bzl.sh'!!!
-  # https://github.com/3rdparty/dev-tools/blob/main/check-code-style/check_style_bzl.sh 
+  # https://github.com/3rdparty/dev-tools/blob/main/check-code-style/check_style_bzl.sh
   IFS=:
+  # NOTE: Make sure that the file extensions matches the file extensions in `check_style.sh`.
   file_paths=$(find . -type f \( -name '*.cc' -o -name '*.cpp' -o -name '*.h' -o -name '*.hpp' -o -name '*.proto' \) -not -path "*/submodules/*")
   unset IFS
 
