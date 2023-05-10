@@ -1,10 +1,10 @@
 #!/bin/bash
 # This scripts runs our various code checks. Specifically it runs:
-# * check_style_of_all_files.sh - clang-format and extra line length checking).
-# * buildifier
-# * yapf
-# * isort
-# * prettier
+# * check_style_of_all_files.sh - clang-format and extra line length checking;
+# * buildifier;
+# * yapf;
+# * isort;
+# * prettier.
 #
 # The script has two modes in which it can operate:
 # * pre-commit - checks only the file in the current commit.
@@ -81,12 +81,13 @@ if [ ! -z "${clang_format_files}" ]; then
     # also contains logic for checking the line length.
     #
     # ISSUE https://github.com/reboot-dev/respect/issues/1371: This script is
-    # very slow as we process each file sequentially and does the line length
+    # very slow as we process each file sequentially and do the line length
     # checking in bash.
     #
     # Depending on whether we are in pre-commit mode of full mode, we want to
     # invoke these scripts differently:
-    # TODO: Consider tidying up this and perhaps solve #1371 in the process.
+    # TODO: Consider tidying up this and perhaps solve the above ISSUE in the
+    # process.
     dev_tools_path=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
     case $mode in
         "full" )
@@ -110,7 +111,7 @@ fi
 # Check bazel files
 bazel_files=$(get_files_by_extension .bzl .bazel BUILD WORKSPACE)
 if [ ! -z "${bazel_files}" ]; then
-    run_check buildifier --lint=warn --warnings=all --mode=check
+    run_check buildifier --lint=warn --warnings=all --mode=check ${bazel_files}
 fi
 
 # Check python files.
