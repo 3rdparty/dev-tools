@@ -147,7 +147,8 @@ check_style_of_files_in_commit() {
     return 1
   fi
 
-  files=$(git diff --cached --name-only --diff-filter=ACM HEAD | grep -iE '\.(cc|h)$')
+  # NOTE: Make sure that the file extensions matches the file extensions in `check_style_of_all_files.sh`.
+  files=$(git diff --cached --name-only --diff-filter=ACM HEAD | grep -iE '\.(cc|cpp|h|hpp|proto)$')
   for file in ${files}; do
     check_style "${file}"
 

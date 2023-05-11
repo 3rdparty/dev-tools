@@ -11,102 +11,60 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Install clang-format-13 if Ubuntu
+    - name: Install code checking tools if on Ubuntu
       if: inputs.os == 'ubuntu-latest'
       run: |
-        # Install Clang 13 (including clang-format-13) through LLVM's preferred mechanism:
+        # Install Clang (including clang-format) through LLVM's preferred mechanism:
         #   https://apt.llvm.org/
+        CLANG_VERSION=14
         wget https://apt.llvm.org/llvm.sh
         chmod +x llvm.sh
-        sudo ./llvm.sh 13
+        sudo ./llvm.sh ${CLANG_VERSION}
         rm ./llvm.sh
-        sudo apt-get install clang-format-13
+        sudo apt-get install -y clang-format-${CLANG_VERSION}
         sudo rm -rf /var/lib/apt/lists/*
         # Remove existing symlink to clang-format and replace it.
         sudo rm /etc/alternatives/clang-format
-        sudo ln -s /usr/bin/clang-format-13 /etc/alternatives/clang-format
+        sudo ln -s /usr/bin/clang-format-${CLANG_VERSION} /etc/alternatives/clang-format
+
+        # Install buildifier.
+        BUILDIFIER_VERSION=5.1.0
+        wget https://github.com/bazelbuild/buildtools/releases/download/${BUILDIFIER_VERSION}/buildifier-linux-amd64
+        chmod +x ./buildifier-linux-amd64
+        sudo mv ./buildifier-linux-amd64 /usr/local/bin/buildifier
+
+        # Install prettier.
+        NODE_VERSION=16
+        NPM_VERSION=8.19.2
+        PRETTIER_VERSION=2.7.1
+        curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | sudo bash -
+        sudo apt-get update
+        sudo apt-get install -y nodejs
+        sudo rm -rf /var/lib/apt/lists/*
+        sudo npm install -g npm@${NPM_VERSION}
+        sudo npm install -g prettier@${PRETTIER_VERSION}
+
       shell: bash
 
-    # On macOS we should install clang-format.
-    - name: Install clang-format-13 if macOS
+    - name: Warn and fail if on MacOS.
       if: inputs.os == 'macos-latest'
       run: |
-        # TODO(benh): is 'brew' not in PATH on macOS like it is not in
-        # the PATH for Linux? If so, where does GitHub install 'brew'
-        # on a macOS runner?
-        brew install clang-format@13
+        echo "This github action does not support macos."
+        echo "If you need macos support, feel free to contribute the necessary install steps."
+        exit 1
       shell: bash
 
-    - name: Check all .cc , .h, .proto files for correct code style
+    - name: Install python tools
       run: |
-        chmod +x ${{ github.action_path }}/check_style_of_all_files.sh
-        ${{ github.action_path }}/check_style_of_all_files.sh
+        pip install \
+          yapf==0.33.0 \
+          mypy==1.2.0 \
+          isort==5.12.0
       shell: bash
 
-    - name: Install buildifier for .bzl files (macos)
-      if: inputs.os == 'macos-latest'
-      run: brew install buildifier
-      shell: bash
-
-    - name: Install buildifier for .bzl files (ubuntu)
-      if: inputs.os == 'ubuntu-latest'
-      run: /home/linuxbrew/.linuxbrew/bin/brew install buildifier
-      shell: bash
-
-    - name: Check all .bzl, .bazel files for correct code style
-      # Since the `buildifier` binary used by `check_style_bzl.sh` is installed
-      # by `brew`, and since `brew`'s binaries are not placed on the `$PATH` on
-      # GitHub's machines, we must manualy put it on the path by `eval`ing
-      # `brew shellenv`.
+    - name: Run code style checks on all code.
       run: |
-        eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-        chmod +x ${{ github.action_path }}/check_style_bzl.sh
-        ${{ github.action_path }}/check_style_bzl.sh
+        SCRIPT_PATH=${{ github.action_path }}/../check-style.sh
+        chmod +x ${SCRIPT_PATH}
+        ${SCRIPT_PATH} --full
       shell: bash
-
-    # TODO(rjh): consider replacing this with 'dorny/paths-filter@v2' rather than us rolling our own
-    # filter checking code.
-    - name: Determine whether there are any Python files
-      id: find-python
-      # The incantation here will set the `found` output for this step to 'true'
-      # if there is a *.py file in the path that the YAPF action would check.
-      run: |
-        if [[ -n $(find . -name *.py -not -path "**/submodules/**") ]]; then
-          echo "found=true" >> $GITHUB_OUTPUT
-        fi
-      shell: bash
-
-    - name: Run YAPF to test if Python code is correctly formatted
-      # We only run YAPF when there are Python files to be checked, since YAPF
-      # errors out when there aren't.
-      if: steps.find-python.outputs.found == 'true'
-      uses: AlexanderMelde/yapf-action@master
-      with:
-        args: --verbose --exclude '**/submodules/**'
-
-    - name: Determine if isort is set up for this repo
-      id: find-isort
-      run: |
-        ISORT_CONFIG_FILE_PATH='./.isort.cfg'
-        if [ -f "$ISORT_CONFIG_FILE_PATH" ]; then
-          echo "found=true" >> $GITHUB_OUTPUT
-        fi
-      shell: bash
-
-    - name: Run isort to test if Python imports are correctly formatted
-      if: steps.find-python.outputs.found == 'true' && steps.find-isort.outputs.found == 'true'
-      id: run-isort
-      shell: bash
-      # Install and run `isort` manually instead of using the GitHub Action
-      # provided by the community; that action swallows the STDOUT, so we won't
-      # be told what's wrong with our diffs.
-      # The chosen version of isort is the version installed on our Codespaces.
-      run: |
-        pip install isort==5.10.1
-        isort --check --diff .
-
-    - name: Check JSON, YAML, Markdown, and more with Prettier
-      uses: creyD/prettier_action@v4.3
-      with:
-        dry: True
-        prettier_options: --check ./
