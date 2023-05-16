@@ -128,7 +128,7 @@ fi
 # Turns out it is all of them.
 if [ ! -z "${affected_files}" ]; then
     # Run prettier.
-    run_check prettier --ignore-unknown --check ${affected_files}
+    run_check prettier --ignore-unknown --check --loglevel=warn ${affected_files}
 fi
 
 # Return the cummulative status code. The status code will be zero if all checks
