@@ -2,6 +2,26 @@
 # latest HEAD. If there are changes to be made it will open a new PR (or update
 # an existing PR if one already exists) for those changes, and set that PR up
 # auto-merge as soon as all checks pass.
+#
+# HOW TO TEST CHANGES TO THIS WORKFLOW:
+#   1. Make your changes to this file.
+#   2. Commit your changes to a branch and push them to GitHub.
+#   3. In a repository that uses this workflow, update the line that says e.g.:
+#        ```
+#        uses: 3rdparty/dev-tools/.github/workflows/submodules-sync.yml@main
+#        ```
+#      to instead point to your development branch, e.g.:
+#        ```
+#        uses: 3rdparty/dev-tools/.github/workflows/submodules-sync.yml@YOUR_BRANCH_NAME
+#        ```
+#   4. Commit and push _those_ changes to a branch on GitHub.
+#   5. Manually trigger the workflow on the latter branch by finding the
+#      workflow on GitHub's `Actions` page. For example:
+#      https://github.com/reboot-dev/respect/actions/workflows/submodules_sync.yml
+#      then:
+#      * Find and click the "Run workflow" button.
+#      * Select the branch you just pushed to.
+#      * Click the "Run workflow" button.
 name: Submodules Sync
 
 on:
@@ -38,25 +58,20 @@ jobs:
       path_matrix: ${{ steps.set-matrix.outputs.path_matrix }}
 
   sync:
-    # Common description of conditions of the job in terms of Pull Request (in case of submodule changes)
-    # and Issues creating/closing behavior:
-    # 1. If no PR and no issue      -> both PR and issue are created
-    # 2. If both PR and issue exist -> PR is updated, issue stays the same
-    # 3. If PR exists but no issue  -> PR is updated, new issue is not created
-    # This case is relevant when, for example, Submodules-sync workflow runs overlap with each other.
-    # That is possible since they run every 15 minutes, but may take longer than 15 minutes to complete.
-    # 4. If no PR but issue exist   -> existing issue is closed, new PR is created, then new issue is created in case of
-    # build failure
     name: Submodules Sync
     needs: build-matrix
     runs-on: ubuntu-latest
-    # We set strategy matrix to work with changes of each submodule separately.
+    # We set a strategy matrix so that each submodule change gets its own PR.
+    # That makes sure that if one submodule becomes un-updatable, it doesn't
+    # block the update of other submodules.
     strategy:
       matrix:
         path: ${{ fromJson(needs.build-matrix.outputs.path_matrix) }}
     defaults:
       run:
         shell: bash
+    permissions:
+      pull-requests: write
 
     steps:
       - name: Checkout repo
@@ -64,29 +79,6 @@ jobs:
         with:
           token: ${{ secrets.private_repo_access_as_rebot_token }}
           submodules: recursive
-      # The following step checks whether the issue and pull request have already been created or not for the same
-      # submodule.
-      - name: Check if PR and issue already exist
-        env:
-          REPO: ${{ github.repository }}
-          GITHUB_TOKEN: ${{ secrets.private_repo_access_as_rebot_token }}
-        run: ./check-if-issue-and-pr-exist.sh Submodule-sync+${{ matrix.path }}+Update+submodule+to+its+latest+version Submodule+sync+failed+for+"${{ matrix.path }}"
-        working-directory: ${{ env.SCRIPTS_DIRECTORY }}
-
-      - name: Close open issue
-        if: env.ISSUE_EXISTS == 'true' && env.PR_EXISTS == 'false'
-        uses: peter-evans/close-issue@v2
-        with:
-          issue-number: ${{ env.ISSUE_NUMBER }}
-          comment: |
-            Auto-closing this issue because the Pull Request it was created for was closed.
-
-      # When the "Close open issue" step closes issue we need to set env variable ISSUE_EXISTS to False.
-      # If we don't set it then "Wait for build to succeed" step won't start and we won't get build status and
-      # next step "Create an issue" won't create a new issue
-      - name: Set ISSUE_EXISTS to False
-        if: (env.ISSUE_EXISTS == 'true' && env.PR_EXISTS == 'false')
-        run: echo "ISSUE_EXISTS=false" >> $GITHUB_ENV
 
       # Checkout the repository to the GitHub Actions runner.
       - name: Checkout reboot-dev/respect
@@ -112,22 +104,23 @@ jobs:
 
       # The following action will commit all changes to the repo (if any), and
       # either:
-      # A) Do nothing, because no changes were committed.
-      # B) Open a PR per each submodule to merge the changes to `main`, because no PR existed yet.
-      # C) Update an existing PR that was already proposing earlier submodule
-      #    updates to also include these latest changes.
+      #   A) Do nothing, because no changes were committed.
+      #   B) Open a PR per each submodule to merge the changes to `main`,
+      #      because no PR existed yet.
+      #   C) Update an existing PR that was already proposing earlier
+      #      submodule updates to also include these latest changes.
       #
       # Since these PRs will only get merged when all checks pass, scenario (C)
       # is most likely to happen when checks fail. In that case there are two
       # possible ways forward:
       #   1. A subsequent update to a submodule fixes the situation, and a later
-      #      run of this workflow will update the previously-broken PR to use the
-      #      fixed submodule, bringing the PR into a healthy state.
-      #   2. The submodule intentionally broke `respect` (this should be rare)
-      #      and a human will need to fix to `respect` to be able to do the
-      #      submodule update. The human will have to close the broken PR after
-      #      they make the fix, so that Rebot will retry the automatic
-      #      integration on a subsequent run.
+      #      run of this workflow will update the previously-broken PR to use
+      #      the fixed submodule, bringing the PR into a healthy state.
+      #   2. The submodule intentionally broke the receiving repo (this should
+      #      be rare) and a human will need to fix to the receiving repo to be
+      #      able to do the submodule update. The human will have to close the
+      #      broken PR after they make the fix, so that Rebot will retry the
+      #      automatic integration on a subsequent run.
       #
       # Note that Rebot does not automatically close PRs that have become
       # obsolete due to human action, although it will happily re-use an
