@@ -120,6 +120,9 @@ if [ ! -z "${python_files}" ]; then
     # Run yapf.
     run_check yapf -d -p ${python_files}
 
+    # Run ruff.
+    run_check ruff check ${python_files}
+
     # Run isort
     run_check isort --check --diff ${python_files}
 fi
