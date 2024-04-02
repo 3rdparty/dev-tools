@@ -4,7 +4,8 @@
 # * buildifier;
 # * yapf;
 # * isort;
-# * prettier.
+# * prettier;
+# * markdown-autodocs.
 #
 # The script has two modes in which it can operate:
 # * pre-commit - checks only the file in the current commit.
@@ -74,6 +75,13 @@ get_files_by_extension() {
     echo $affected_files | tr ' ' '\n' | egrep $filter
 }
 
+# Helper function to get a checksum of a file list.
+# Calculates a per-file checksum, sorts by filename, and then returns a sum over
+# the sums.
+calculate_checksum() {
+    sha256sum $@ | sort -k 2 | sha256sum
+}
+
 # Check files that we can clang-format.
 clang_format_files=$(get_files_by_extension .cc .cpp .h .hpp .proto)
 if [ ! -z "${clang_format_files}" ]; then
@@ -127,11 +135,22 @@ if [ ! -z "${python_files}" ]; then
     run_check isort --check --diff ${python_files}
 fi
 
-# Check files that we can check with prettier.
-# Turns out it is all of them.
+# Check "any" file.
 if [ ! -z "${affected_files}" ]; then
     # Run prettier.
     run_check prettier --ignore-unknown --check --loglevel=warn ${affected_files}
+
+    # Check documentation snippets (which can be affected by changes in any other file).
+    markdown_files=$(find . -type f -iname '*.md')
+    pre_autodocs_checksum=$(calculate_checksum $markdown_files)
+    run_check markdown-autodocs -c code-block -o ${markdown_files} > /dev/null
+    post_autodocs_checksum=$(calculate_checksum $markdown_files)
+    if [ "$pre_autodocs_checksum" != "$post_autodocs_checksum" ]; then
+        echo "There are code changes after running 'markdown-autodocs'."
+        echo "Please review the new changes, determine if they should be part of this commit, and if so, add them to the commit before continuing."
+
+        status_code=1
+    fi
 fi
 
 # Return the cummulative status code. The status code will be zero if all checks

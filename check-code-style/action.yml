@@ -33,16 +33,18 @@ runs:
         chmod +x ./buildifier-linux-amd64
         sudo mv ./buildifier-linux-amd64 /usr/local/bin/buildifier
 
-        # Install prettier.
+        # Install prettier and markdown-autodocs.
         NODE_VERSION=16
         NPM_VERSION=8.19.2
         PRETTIER_VERSION=2.7.1
+        MARKDOWN_AUTODOCS_VERSION=1.0.133
         curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | sudo bash -
         sudo apt-get update
         sudo apt-get install -y nodejs
         sudo rm -rf /var/lib/apt/lists/*
         sudo npm install -g npm@${NPM_VERSION}
         sudo npm install -g prettier@${PRETTIER_VERSION}
+        sudo npm install -g markdown-autodocs@${MARKDOWN_AUTODOCS_VERSION}
 
       shell: bash
 
