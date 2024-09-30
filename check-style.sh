@@ -142,8 +142,9 @@ if [ ! -z "${affected_files}" ]; then
 
     # Check documentation snippets (which can be affected by changes in any other file).
     markdown_files=$(find . -type f -iname '*.md')
+    unindent_auto_doc_script=$(find . -type f -name 'unindent_auto_doc.py')
     pre_autodocs_checksum=$(calculate_checksum $markdown_files)
-    run_check markdown-autodocs -c code-block -o ${markdown_files} > /dev/null
+    run_check markdown-autodocs -c code-block -o ${markdown_files} && python $unindent_auto_doc_script ${markdown_files} > /dev/null
     post_autodocs_checksum=$(calculate_checksum $markdown_files)
     if [ "$pre_autodocs_checksum" != "$post_autodocs_checksum" ]; then
         echo "There are code changes after running 'markdown-autodocs'."
