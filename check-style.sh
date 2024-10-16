@@ -141,7 +141,7 @@ if [ ! -z "${affected_files}" ]; then
     run_check prettier --ignore-unknown --check --loglevel=warn ${affected_files}
 
     # Check documentation snippets (which can be affected by changes in any other file).
-    markdown_files=$(find . -type f -iname '*.md')
+    markdown_files=$(find . -type f \( -name "*.md" -o -name "*.mdx" \))
     unindent_auto_doc_script=$(find . -type f -name 'unindent_auto_doc.py')
     pre_autodocs_checksum=$(calculate_checksum $markdown_files)
     run_check markdown-autodocs -c code-block -o ${markdown_files} > /dev/null && python $unindent_auto_doc_script ${markdown_files} > /dev/null
