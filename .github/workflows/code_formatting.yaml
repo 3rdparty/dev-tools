@@ -33,7 +33,7 @@ concurrency:
 jobs:
   check-code-format:
     name: Code Formatting Check
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
         with:
@@ -56,4 +56,4 @@ jobs:
       # is also used by other repos that submodule this repo.
       - uses: ./check-code-style
         with:
-          os: ubuntu-latest
+          os: ubuntu-20.04
