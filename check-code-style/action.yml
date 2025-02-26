@@ -12,11 +12,11 @@ runs:
   using: "composite"
   steps:
     - name: Install code checking tools if on Ubuntu
-      if: inputs.os == 'ubuntu-latest' || inputs.os == 'ubuntu-20.04'
+      if: inputs.os == 'ubuntu-latest'
       run: |
         # Install Clang (including clang-format) through LLVM's preferred mechanism:
         #   https://apt.llvm.org/
-        CLANG_VERSION=14
+        CLANG_VERSION=19
         wget https://apt.llvm.org/llvm.sh
         chmod +x llvm.sh
         sudo ./llvm.sh ${CLANG_VERSION}
