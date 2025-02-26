@@ -94,9 +94,7 @@ check_clang_format() {
   # The command `clang-format --version` behaves differently on different OS.
   # For example, on Ubuntu this command will message us out with the following
   # content:
-  #   Ubuntu clang-format version 12.0.0-3ubuntu1~20.04.4
-  # On macos:
-  #   clang-format version 13.0.0
+  #   Ubuntu clang-format version 19.1.7 (++20250114103238+cd708029e0b2-1~exp1~20250114103342.77)
   # That's why commands like `cut`, `head`, `tr` are not the way we wanna grab
   # the version's numbers.
 
@@ -106,9 +104,10 @@ check_clang_format() {
   # Retain the part after the `version ` (including space too).
   clang_format_version_found=${clang_format_version_output##*version }
 
-  # Retain the part before `-`.
-  clang_format_version_found=${clang_format_version_found%-*}
-  clang_format_version_required="13.0.0"
+  # Retain the part before ` `.
+  clang_format_version_found=${clang_format_version_found% *}
+
+  clang_format_version_required="19.1.7"
 
   check_version ${clang_format_version_found} ${clang_format_version_required}
 
