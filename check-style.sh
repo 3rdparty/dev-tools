@@ -143,9 +143,14 @@ if [ ! -z "${affected_files}" ]; then
     # Check documentation snippets (which can be affected by changes in any other file).
     # Markdown files exclude `node_modules` (pulled NPM packages) and `site-packages` (pulled Python packages).
     markdown_files=$(find . -type f \( -name "*.md" -o -name "*.mdx" \) -not \( -path "*/node_modules/*" -o -path "*/site-packages/*" \))
-    unindent_auto_doc_script=$(find . -type f -name 'unindent_auto_doc.py')
     pre_autodocs_checksum=$(calculate_checksum $markdown_files)
-    run_check markdown-autodocs -c code-block -o ${markdown_files} > /dev/null && python $unindent_auto_doc_script ${markdown_files} > /dev/null
+
+    run_check markdown-autodocs -c code-block -o ${markdown_files} > /dev/null
+    unindent_auto_doc_script=$(find . -type f -name 'unindent_auto_doc.py')
+    if [[ -n "$unindent_auto_doc_script" ]]; then
+        python "$unindent_auto_doc_script" ${markdown_files} > /dev/null
+    fi
+
     post_autodocs_checksum=$(calculate_checksum $markdown_files)
     if [ "$pre_autodocs_checksum" != "$post_autodocs_checksum" ]; then
         echo "There are code changes after running 'markdown-autodocs'."
