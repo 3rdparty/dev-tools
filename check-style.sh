@@ -41,6 +41,8 @@ case $1 in
         exit 2
 esac
 
+# Filter out symlinks from `affected_files`. We'll check the real files.
+affected_files=$(echo "$affected_files" | xargs -r -n1 file | grep -v 'symbolic link' | cut -d: -f1 | tr '\n' ' ')
 
 # Unset variable would be a sign of programmer error. We are not using '-e' in
 # this script as we'd like to handle these cases ourselves where relevant, i.e.,
