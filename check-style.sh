@@ -41,56 +41,17 @@ case $1 in
         exit 2
 esac
 
-# Filter out symlinks from `affected_files`. We'll check the real files.
-# Use bash test operators instead of the 'file' command to avoid issues with
-# filenames containing special characters (colons, commas, etc).
-filtered_files=""
-for f in $affected_files; do
-    if [ ! -L "$f" ]; then
-        filtered_files="$filtered_files $f"
-    fi
-done
-affected_files=$(echo "$filtered_files" | xargs -r)
+# Source shared helper functions.
+dev_tools_path=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
+source "${dev_tools_path}/style-helpers.sh"
+
+# Filter out symlinks.
+filter_symlinks
 
 # Unset variable would be a sign of programmer error. We are not using '-e' in
 # this script as we'd like to handle these cases ourselves where relevant, i.e.,
 # allow more than one code check failure per run.
 set -u
-
-# Work from the git root. This is important to help some tools pick up the
-# correct configuration.
-git_root=$(git rev-parse --show-toplevel)
-cd "${git_root}"
-
-# Define a cummulative status code for the script. The value is Updated through
-# 'run_check' when running checks. A status code creater than 0 will indicate
-# that one or more checks failed.
-status_code=0
-
-# Run a code check command and update the cummulative error code.
-run_check() {
-    $@
-    status_code=$(($status_code + $?))
-}
-
-# Helper function to filter affected files by extension.
-get_files_by_extension() {
-    filter=""
-    for ext in $@; do
-        # We want a `.` to be a full stop, not a regexp wildcard.
-        filter="$(echo $ext | sed -e 's|^\.|\\.|')$|${filter}"
-    done
-    filter=$(echo $filter | sed -e 's/|$//')
-
-    echo $affected_files | tr ' ' '\n' | egrep $filter
-}
-
-# Helper function to get a checksum of a file list.
-# Calculates a per-file checksum, sorts by filename, and then returns a sum over
-# the sums.
-calculate_checksum() {
-    sha256sum $@ | sort -k 2 | sha256sum
-}
 
 # Check files that we can clang-format.
 clang_format_files=$(get_files_by_extension .cc .cpp .h .hpp .proto)
@@ -106,7 +67,6 @@ if [ ! -z "${clang_format_files}" ]; then
     # invoke these scripts differently:
     # TODO: Consider tidying up this and perhaps solve the above ISSUE in the
     # process.
-    dev_tools_path=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
     case $mode in
         "full" )
             # For full checking, we can invoke the wrapper script directly.
