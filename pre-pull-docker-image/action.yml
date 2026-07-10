@@ -11,8 +11,7 @@
 # adding it to a job can only help and never hurt.
 
 name: "Pre-pull Docker Image"
-description:
-  "Pull the Docker image named by a Dockerfile's first `FROM` line
+description: "Pull the Docker image named by a Dockerfile's first `FROM` line
   with retries, so that a later build in the same job finds it in the
   local image store."
 
@@ -28,8 +27,7 @@ inputs:
     required: false
     default: "5"
   initial-delay-seconds:
-    description:
-      "Delay before the second attempt; doubles after every further
+    description: "Delay before the second attempt; doubles after every further
       failed attempt, capped at 60 seconds."
     required: false
     default: "5"
