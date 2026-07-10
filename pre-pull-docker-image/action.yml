@@ -1,0 +1,93 @@
+# A composite action that pulls a Docker image into the runner's local
+# image store, retrying transient registry failures (e.g. 5xx errors
+# from Docker Hub or GHCR) with capped exponential backoff. Running it
+# before a `docker build`/`docker buildx` step (with the default
+# `docker` buildx driver, which resolves `FROM` images from the local
+# store when they are already present) keeps a flaky registry off the
+# build's critical path.
+#
+# The action is deliberately non-fatal: if every attempt fails it warns
+# and exits successfully, leaving the build to try the pull itself, so
+# adding it to a job can only help and never hurt.
+
+name: "Pre-pull Docker Image"
+description:
+  "Pull the Docker image named by a Dockerfile's first `FROM` line
+  with retries, so that a later build in the same job finds it in the
+  local image store."
+
+inputs:
+  dockerfile:
+    description:
+      "Path to a Dockerfile; the image to pull is taken from its first
+      `FROM` line (the base of its first stage)."
+    required: false
+    default: "Dockerfile"
+  max-attempts:
+    description: "Maximum number of pull attempts."
+    required: false
+    default: "5"
+  initial-delay-seconds:
+    description:
+      "Delay before the second attempt; doubles after every further
+      failed attempt."
+    required: false
+    default: "5"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Pull the image, retrying transient failures
+      shell: bash
+      # Bind the inputs to environment variables so the script body
+      # never interpolates workflow expressions directly.
+      env:
+        DOCKERFILE: ${{ inputs.dockerfile }}
+        MAX_ATTEMPTS: ${{ inputs.max-attempts }}
+        INITIAL_DELAY_SECONDS: ${{ inputs.initial-delay-seconds }}
+      run: |
+        set -u
+        if [ ! -f "${DOCKERFILE}" ]; then
+          echo "warning: '${DOCKERFILE}' not found; skipping pre-pull" >&2
+          exit 0
+        fi
+        # Take the image from the first `FROM` line, skipping options
+        # like `--platform=...`.
+        from_line="$(grep -iE '^[[:space:]]*FROM[[:space:]]' \
+          "${DOCKERFILE}" | head -n1)"
+        image="$(echo "${from_line}" \
+          | awk '{ for (i = 2; i <= NF; i++)
+                     if ($i !~ /^--/) { print $i; exit } }')"
+        if [ -z "${image}" ]; then
+          echo "warning: could not determine an image to pull;" \
+            "skipping pre-pull" >&2
+          exit 0
+        fi
+        case "${image}" in
+          *'$'*)
+            # A reference like `FROM base-${VARIANT}` needs build args
+            # to resolve, which this action doesn't have.
+            echo "warning: image reference '${image}' contains an" \
+              "unresolved variable; skipping pre-pull" >&2
+            exit 0
+            ;;
+        esac
+        echo "Pre-pulling image: ${image}"
+        attempt=1
+        delay="${INITIAL_DELAY_SECONDS}"
+        while true; do
+          if docker pull "${image}"; then
+            break
+          fi
+          if [ "${attempt}" -ge "${MAX_ATTEMPTS}" ]; then
+            echo "warning: pull of ${image} failed after" \
+              "${MAX_ATTEMPTS} attempts; continuing so the build can" \
+              "retry the pull itself" >&2
+            break
+          fi
+          echo "pull attempt ${attempt}/${MAX_ATTEMPTS} failed;" \
+            "retrying in ${delay}s" >&2
+          sleep "${delay}"
+          attempt=$((attempt + 1))
+          delay=$((delay * 2))
+        done
