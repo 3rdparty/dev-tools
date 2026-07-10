@@ -30,7 +30,7 @@ inputs:
   initial-delay-seconds:
     description:
       "Delay before the second attempt; doubles after every further
-      failed attempt."
+      failed attempt, capped at 60 seconds."
     required: false
     default: "5"
 
@@ -47,6 +47,26 @@ runs:
         INITIAL_DELAY_SECONDS: ${{ inputs.initial-delay-seconds }}
       run: |
         set -u
+        # The numeric inputs arrive as unvalidated strings; a
+        # non-numeric value would make the loop's comparisons error and
+        # never hit the max-attempts break, so misconfigured values
+        # fall back to the defaults with a warning instead.
+        max_attempts="${MAX_ATTEMPTS}"
+        case "${max_attempts}" in
+          '' | *[!0-9]* | 0)
+            echo "warning: invalid max-attempts '${max_attempts}';" \
+              "using 5" >&2
+            max_attempts=5
+            ;;
+        esac
+        delay="${INITIAL_DELAY_SECONDS}"
+        case "${delay}" in
+          '' | *[!0-9]*)
+            echo "warning: invalid initial-delay-seconds '${delay}';" \
+              "using 5" >&2
+            delay=5
+            ;;
+        esac
         if [ ! -f "${DOCKERFILE}" ]; then
           echo "warning: '${DOCKERFILE}' not found; skipping pre-pull" >&2
           exit 0
@@ -64,6 +84,12 @@ runs:
           exit 0
         fi
         case "${image}" in
+          scratch)
+            # `scratch` is Docker's reserved empty image; there is
+            # nothing to pull.
+            echo "base image is 'scratch'; nothing to pre-pull"
+            exit 0
+            ;;
           *'$'*)
             # A reference like `FROM base-${VARIANT}` needs build args
             # to resolve, which this action doesn't have.
@@ -74,20 +100,24 @@ runs:
         esac
         echo "Pre-pulling image: ${image}"
         attempt=1
-        delay="${INITIAL_DELAY_SECONDS}"
         while true; do
           if docker pull "${image}"; then
             break
           fi
-          if [ "${attempt}" -ge "${MAX_ATTEMPTS}" ]; then
+          if [ "${attempt}" -ge "${max_attempts}" ]; then
             echo "warning: pull of ${image} failed after" \
-              "${MAX_ATTEMPTS} attempts; continuing so the build can" \
+              "${max_attempts} attempts; continuing so the build can" \
               "retry the pull itself" >&2
             break
           fi
-          echo "pull attempt ${attempt}/${MAX_ATTEMPTS} failed;" \
+          echo "pull attempt ${attempt}/${max_attempts} failed;" \
             "retrying in ${delay}s" >&2
           sleep "${delay}"
           attempt=$((attempt + 1))
+          # Double the delay, capping it so a large `max-attempts`
+          # cannot produce very long sleeps.
           delay=$((delay * 2))
+          if [ "${delay}" -gt 60 ]; then
+            delay=60
+          fi
         done
