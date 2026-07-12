@@ -3,10 +3,17 @@
 # We'll print some debug information along the way.
 echo "Started in working directory '$(pwd)'..."
 
-# Assumption: this script is being run from _inside_ a submodule, but is
-# supposed to act on the repo that _contains_ that submodule. Change our working
-# directory accordingly.
-cd "$(git rev-parse --show-toplevel)/.."
+# Move to the repository whose submodules we want to sync. By default this
+# script assumes it runs from _inside_ a submodule and acts on the repo that
+# directly _contains_ that submodule (one level up). When the submodule is
+# nested more than one level deep, the caller can set `SUBMODULE_SYNC_ROOT` to
+# the target repository's directory (relative to the checkout root) to act on
+# that repository instead.
+if [ -n "${SUBMODULE_SYNC_ROOT:-}" ]; then
+  cd "${GITHUB_WORKSPACE}/${SUBMODULE_SYNC_ROOT}"
+else
+  cd "$(git rev-parse --show-toplevel)/.."
+fi
 
 gitmodules_path="$(git rev-parse --show-toplevel)/.gitmodules"
 echo "Assumed relevant '.gitmodules' file is '$gitmodules_path'"

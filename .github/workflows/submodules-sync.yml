@@ -30,12 +30,23 @@ on:
       devtools_directory:
         required: true
         type: string
+      submodule_sync_root:
+        description: >-
+          Directory of the repository whose submodules to sync, relative to
+          the checkout root. Defaults (empty) to the repository that directly
+          contains the `dev-tools` submodule. Set it (for example to ".") when
+          `dev-tools` is nested more than one level deep and the sync should
+          act on an ancestor repository instead.
+        required: false
+        type: string
+        default: ""
     secrets:
       private_repo_access_as_rebot_token:
         required: true
 
 env:
   SCRIPTS_DIRECTORY: ${{ inputs.devtools_directory }}/.github/workflows/scripts
+  SUBMODULE_SYNC_ROOT: ${{ inputs.submodule_sync_root }}
 
 jobs:
   # Since we want to create one PR per each submodule on submodule change
